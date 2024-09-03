@@ -1,36 +1,159 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Next.js CI Pipeline with GitHub Actions
 
-## Getting Started
+This repository demonstrates how to set up a Continuous Integration (CI) pipeline for a Next.js application using GitHub Actions. The pipeline is configured to automatically lint, check code quality, and run unit tests on every push or pull request to the `feature/*` branches.
 
-First, run the development server:
+## Project Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This project is built with Next.js, a powerful React framework for building server-rendered and static web applications. The CI pipeline ensures that every code change is automatically tested and validated, maintaining the integrity and quality of the codebase.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## CI Pipeline Overview
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The CI pipeline is defined in the `.github/workflows/ci.yml` file. Here's a breakdown of the steps involved:
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+1. **Trigger Events**:
 
-## Learn More
+   - The workflow is triggered on `push` events to any `feature/*` branches.
+   - The workflow also triggers on `pull_request` events targeting these branches.
 
-To learn more about Next.js, take a look at the following resources:
+2. **Jobs**:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   - **Linter**: Runs ESLint to check for code style issues.
+   - **Code Quality**: Performs additional code quality checks.
+   - **Unit Tests**: Executes unit tests to validate the functionality of the application.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+3. **Dependencies**:
+   - The project uses `pnpm` for package management, which is set up in the workflow before running any jobs.
 
-## Deploy on Vercel
+## How to Set Up
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+To replicate this CI pipeline in your own project, follow these steps:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+1. **Create a Next.js Project**:
+
+   ```bash
+   npx create-next-app@latest my-nextjs-app
+   cd my-nextjs-app
+   ```
+
+2. **Create a GitHub Repository**:
+
+   - Go to GitHub and create a new repository.
+   - Push your Next.js project to this repository.
+
+3. **Add the CI Workflow**:
+
+   - Create a `.github/workflows/ci.yml` file in your repository with the following content:
+
+   ```yaml
+        name: CI Pipeline
+
+        on:
+        push:
+            branches:
+            - "feature/*"
+
+        jobs:
+        linter:
+            runs-on: ubuntu-latest
+            steps:
+            - name: Checkout code
+                uses: actions/checkout@v3
+
+            - name: Set up Node.js
+                uses: actions/setup-node@v3
+                with:
+                node-version: "18"
+
+            - name: Install pnpm
+                run: npm install -g pnpm
+
+            - name: Install dependencies
+                run: pnpm install
+
+            - name: Run ESLint
+                run: pnpm run lint
+
+        code_quality:
+            runs-on: ubuntu-latest
+            needs: linter
+            steps:
+            - name: Checkout code
+                uses: actions/checkout@v3
+
+            - name: Set up Node.js
+                uses: actions/setup-node@v3
+                with:
+                node-version: "18"
+
+            - name: Install pnpm
+                run: npm install -g pnpm
+
+            - name: Install dependencies
+                run: pnpm install
+
+            - name: Run code quality check
+                run: pnpm run lint
+
+        unit_tests:
+            runs-on: ubuntu-latest
+            needs: code_quality
+            steps:
+            - name: Checkout code
+                uses: actions/checkout@v3
+
+            - name: Set up Node.js
+                uses: actions/setup-node@v3
+                with:
+                node-version: "18"
+
+            - name: Install pnpm
+                run: npm install -g pnpm
+
+            - name: Install dependencies
+                run: pnpm install
+
+            - name: Run unit tests
+                run: pnpm test
+
+        merge_to_dev:
+            runs-on: ubuntu-latest
+            needs: unit_tests
+            steps:
+            - name: Checkout dev branch
+                uses: actions/checkout@v3
+                with:
+                ref: dev
+
+            - name: Set up Git
+                run: |
+                git config --global user.name "github-actions"
+                git config --global user.email "github-actions@github.com"
+
+            - name: Fetch all branches
+                run: git fetch origin
+
+            - name: Extract branch name
+                id: extract_branch
+                run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+
+            - name: Print branch info
+                run: |
+                echo "Current branch: $(git branch --show-current)"
+                git branch -a
+                git log --oneline -n 5
+
+            - name: Merge feature branch to dev
+                run: |
+                git checkout dev
+                git pull origin dev
+                git merge origin/${{ env.BRANCH_NAME }} --no-ff --no-edit || exit 1
+                git push origin dev
+
+   ```
+
+4. **Commit and Push**:
+   - Commit your changes and push them to your GitHub repository. The CI pipeline will automatically run for every push or pull request.
+
+---
+
+This README file provides an overview of the CI setup process and includes the relevant details and steps for others to replicate the setup. It also includes a direct link to my GitHub repository, making it easy for readers to explore the project.
