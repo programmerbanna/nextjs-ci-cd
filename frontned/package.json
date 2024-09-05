@@ -9,7 +9,8 @@
     "lint": "next lint",
     "lint-staged": "lint-staged",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "code-quality": "eslint . --ext .js,.ts --format json -o report.json"
   },
   "dependencies": {
     "next": "14.2.7",
